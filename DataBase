@@ -1,0 +1,162 @@
+-- ============================================================
+-- CREARE BAZĂ DE DATE
+-- ============================================================
+IF DB_ID('MAIB_DB') IS NOT NULL
+    DROP DATABASE MAIB_DB;
+GO
+
+CREATE DATABASE MAIB_DB;
+GO
+USE MAIB_DB;
+GO
+
+
+-- ============================================================
+-- TABEL: Clienti
+-- ============================================================
+CREATE TABLE Clienti (
+    id_client INT IDENTITY(1,1) PRIMARY KEY,
+    nume NVARCHAR(100),
+    prenume NVARCHAR(100),
+    idnp NVARCHAR(13) UNIQUE,
+    telefon NVARCHAR(20),
+    email NVARCHAR(150),
+    adresa NVARCHAR(200),
+    activ BIT DEFAULT 1
+);
+GO
+
+
+-- ============================================================
+-- TABEL: Conturi
+-- ============================================================
+CREATE TABLE Conturi (
+    id_cont INT IDENTITY(1,1) PRIMARY KEY,
+    id_client INT NOT NULL,
+    numar_cont NVARCHAR(30) UNIQUE NOT NULL,
+    tip_cont NVARCHAR(50),
+    moneda NVARCHAR(10),
+    sold DECIMAL(18,2) DEFAULT 0,
+    activ BIT DEFAULT 1,
+
+    FOREIGN KEY (id_client) REFERENCES Clienti(id_client)
+        ON DELETE CASCADE
+);
+GO
+
+
+-- ============================================================
+-- TABEL: Tranzactii
+-- ============================================================
+CREATE TABLE Tranzactii (
+    id_tranzactie INT IDENTITY(1,1) PRIMARY KEY,
+    id_cont_sursa INT NOT NULL,
+    id_cont_destinatie INT NULL,
+    tip_tranzactie NVARCHAR(50),
+    suma DECIMAL(18,2),
+    moneda NVARCHAR(10),
+    comision DECIMAL(18,2),
+    metoda_plata NVARCHAR(50),
+    detalii NVARCHAR(255),
+    data_op DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (id_cont_sursa) REFERENCES Conturi(id_cont),
+    FOREIGN KEY (id_cont_destinatie) REFERENCES Conturi(id_cont)
+);
+GO
+
+
+-- ============================================================
+-- TABEL: Roluri
+-- ============================================================
+CREATE TABLE Roluri (
+    id_rol INT IDENTITY(1,1) PRIMARY KEY,
+    nume_rol NVARCHAR(50)
+);
+GO
+
+INSERT INTO Roluri(nume_rol) VALUES
+('admin'),
+('operator');
+GO
+
+
+-- ============================================================
+-- TABEL: Utilizatori
+-- ============================================================
+CREATE TABLE Utilizatori (
+    id_user INT IDENTITY(1,1) PRIMARY KEY,
+    username NVARCHAR(50) UNIQUE,
+    parola NVARCHAR(200),
+    id_rol INT,
+    activ BIT DEFAULT 1,
+
+    FOREIGN KEY (id_rol) REFERENCES Roluri(id_rol)
+);
+GO
+
+
+-- ============================================================
+-- TABEL: Setări Comisioane
+-- ============================================================
+CREATE TABLE SetariComisioane (
+    id INT PRIMARY KEY,
+    retragere_proc FLOAT,
+    retragere_fix FLOAT,
+    transfer_ext_proc FLOAT,
+    transfer_ext_fix FLOAT
+);
+GO
+
+INSERT INTO SetariComisioane(id, retragere_proc, retragere_fix, transfer_ext_proc, transfer_ext_fix)
+VALUES (1, 0.5, 3, 1.0, 5);
+GO
+
+
+-- ============================================================
+-- ÎNREGISTRĂRI DEMO — Utilizatori
+-- Parolele sunt NE-hash-uite pentru simplitate; aplicația ta
+-- le poate hasha dacă dorești.
+-- ============================================================
+INSERT INTO Utilizatori(username, parola, id_rol, activ) VALUES
+('admin', '1234', 1, 1),     -- ADMIN
+('operator1', '1234', 2, 1), -- Operator 1
+('operator2', '1234', 2, 1); -- Operator 2
+GO
+
+
+-- ============================================================
+-- ÎNREGISTRĂRI DEMO — Clienți
+-- ============================================================
+INSERT INTO Clienti(nume, prenume, idnp, telefon, email, adresa, activ) VALUES
+('Popescu', 'Ion', '1234567890123', '060000001', 'ion.popescu@mail.com', 'Chișinău', 1),
+('Rusu', 'Andrei', '1234567890124', '060000002', 'andrei.rusu@mail.com', 'Cricova', 1),
+('Istrate', 'Maria', '1234567890125', '060000003', 'maria.istrate@mail.com', 'Durlești', 1);
+GO
+
+
+-- ============================================================
+-- ÎNREGISTRĂRI DEMO — Conturi
+-- ============================================================
+INSERT INTO Conturi(id_client, numar_cont, tip_cont, moneda, sold, activ) VALUES
+(1, 'MAIB100000001', 'Curent', 'MDL', 2000, 1),
+(1, 'MAIB100000002', 'Economii', 'MDL', 5000, 1),
+(2, 'MAIB200000001', 'Curent', 'MDL', 1000, 1);
+GO
+
+
+-- ============================================================
+-- ÎNREGISTRĂRI DEMO — Tranzacții
+-- ============================================================
+INSERT INTO Tranzactii(id_cont_sursa, tip_tranzactie, suma, moneda, comision, metoda_plata, detalii)
+VALUES
+(1, 'Depunere', 500, 'MDL', 0, 'Cash', 'Depunere inițială');
+
+INSERT INTO Tranzactii(id_cont_sursa, tip_tranzactie, suma, moneda, comision, metoda_plata, detalii)
+VALUES
+(1, 'Retragere', 300, 'MDL', 4.5, 'Card', 'Retragere numerar');
+
+INSERT INTO Tranzactii(id_cont_sursa, id_cont_destinatie, tip_tranzactie, suma, moneda, comision, metoda_plata, detalii)
+VALUES
+(1, 3, 'Transfer Intern', 700, 'MDL', 0, 'Online', 'Transfer între conturi');
+GO
